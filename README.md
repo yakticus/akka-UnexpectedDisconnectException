@@ -12,7 +12,7 @@ You need Python & Pip installed to run this example. I used Python 2.7.10 and pi
 
 ```
 $ python server/server.py &
-$ sbt run
+$ cd client/ && sbt run
 ```
 
 ## the bug
