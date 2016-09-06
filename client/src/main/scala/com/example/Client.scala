@@ -1,50 +1,43 @@
 package com.example
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
-import akka.stream.ActorMaterializer
-
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
+  import scalaj.{http => scalaj}
 
 object Client  {
-  private[this] implicit val system = ActorSystem()
-  private[this] implicit val materializer = ActorMaterializer()
-  import system.dispatcher // implicit execution context for futures
+  val serverUri = "http://localhost:5000"
 
-  private[this] val timeout = 10.seconds
-  private[this] val serverUri = "http://localhost:5000"
+  var lastRequestTimeMs = 0l
+
+    private def timeIt[T](f: => T): T = {
+    val start = System.currentTimeMillis()
+    val result = f
+    val end = System.currentTimeMillis()
+    lastRequestTimeMs = end - start
+    result
+  }
 
   def moveAlong(): String = {
-    getResponseBody(s"$serverUri/")
+    getResponseBody("/")
   }
 
   def doSomethingCool(thing: Double): String = {
-    postJson(s"$serverUri/doSomethingCool", "{\"thing\": " + thing + "}")
+    postJson("/doSomethingCool", "{\"thing\": " + thing + "}")
   }
 
-  private def postJson(uri: String, json: String): String = {
-    val responseFuture: Future[HttpResponse] = Http().singleRequest(HttpRequest(
-      uri = uri,
-      method = HttpMethods.POST,
-      entity = HttpEntity(ContentTypes.`application/json`, json)
-    ))
-
-    awaitString(responseFuture)
+  private[this] def http(uri: String): scalaj.HttpRequest = {
+    scalaj.Http(serverUri + uri).timeout(1000, 10000)
   }
 
-  private def getResponseBody(uri: String): String = {
-    val responseFuture: Future[HttpResponse] = Http().singleRequest(HttpRequest(uri = uri))
-    awaitString(responseFuture)
+  private[this] def getResponseBody(uri: String): String = {
+    val response = timeIt {
+      http(uri).asString
+    }
+    response.body
   }
 
-  private def awaitString(responseFuture: Future[HttpResponse]): String = {
-    // just block and wait for the response
-    val response = Await.result(responseFuture, timeout)
-
-    // get the response body as a string. block on it.
-    Await.result(response.entity.toStrict(timeout).map(_.data.decodeString("UTF-8")), timeout)
+  private[this] def postJson(uri: String, json: String): String = {
+    val response = timeIt {
+      http(uri).postData(json).header("Content-Type", "application/json").asString
+    }
+    response.body
   }
-
 }

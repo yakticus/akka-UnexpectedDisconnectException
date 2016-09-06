@@ -1,6 +1,7 @@
 #!flask/bin/python
 from flask import Flask, Response, jsonify, request
 import os
+from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
 
@@ -20,4 +21,5 @@ def doSomethingCool():
 if __name__ == '__main__':
     # Bind to PORT if defined, otherwise default to 5000.
     port = int(os.environ.get('PORT', 5000))
+    WSGIRequestHandler.protocol_version = "HTTP/1.1"
     app.run(host='0.0.0.0', port=port)
